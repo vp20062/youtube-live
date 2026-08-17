@@ -24,16 +24,15 @@ jobs:
           ffmpeg \
             -re \
             -stream_loop -1 \
-            -i media/music.mp3 \
-            -loop 1 \
-            -i media/background.jpg \
+            -i "media/Kissu Live (1).m4a" \
+            -f lavfi \
+            -i "color=c=black:s=1280x720:r=30" \
             -map 1:v:0 \
             -map 0:a:0 \
             -c:v libx264 \
             -preset veryfast \
             -tune stillimage \
             -r 30 \
-            -s 1280x720 \
             -b:v 2500k \
             -pix_fmt yuv420p \
             -g 60 \
