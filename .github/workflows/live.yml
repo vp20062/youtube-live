@@ -24,7 +24,7 @@ jobs:
           ffmpeg \
             -re \
             -stream_loop -1 \
-            -i "media/Kissu Live (1).m4a" \
+            -i "audio.m4a" \
             -f lavfi \
             -i "color=c=black:s=1280x720:r=30" \
             -map 1:v:0 \
