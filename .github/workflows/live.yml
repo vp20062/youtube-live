@@ -23,7 +23,12 @@ jobs:
         env:
           STREAM_KEY: ${{ secrets.STREAM_KEY }}
         run: |
-          ffmpeg -re -stream_loop -1 -i "audio.m4a" -loop 1 -i "xyz.png" -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -r 30 -g 60 -c:a aac -b:a 128k -ar 44100 -shortest -f flv "rtmp://a.rtmp.youtube.com/live2/${STREAM_KEY}"
+          if [ -z "$STREAM_KEY" ]; then
+            echo "Error: STREAM_KEY is empty. Check your GitHub Secrets."
+            exit 1
+          fi
+          
+          ffmpeg -re -loop 1 -i xyz.png -stream_loop -1 -i audio.m4a -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -r 30 -g 60 -c:a aac -b:a 128k -ar 44100 -map 0:v:0 -map 1:a:0 -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
 
       - name: Trigger Next Run
         if: always()
@@ -31,4 +36,3 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh workflow run live.yml --repo ${{ github.repository }}
-          
