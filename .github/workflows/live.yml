@@ -16,11 +16,11 @@ jobs:
 
       - name: Execute Stream
         run: |
-          timeout 350m ffmpeg -re -stream_loop -1 -i audio.mp3 -loop 1 -framerate 30 -i xyz.png -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -r 30 -g 60 -c:a aac -b:a 128k -ar 44100 -shortest -f flv "rtmp://a.rtmp.youtube.com/live2/YOUR_STREAM_KEY" || true
+          ffmpeg -re -stream_loop -1 -i audio.m4a -loop 1 -framerate 30 -i xyz.png -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -r 30 -g 60 -c:a aac -b:a 128k -ar 44100 -shortest -f flv "rtmp://a.rtmp.youtube.com/live2/YOUR_STREAM_KEY"
 
       - name: Trigger Next Run
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh workflow run stream.yml --repo ${{ github.repository }}
+          gh workflow run live.yml --repo ${{ github.repository }}
