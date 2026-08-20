@@ -16,14 +16,14 @@ jobs:
 
       - name: Install FFmpeg
         run: |
-          sudo apt-get update
+          sudo apt-get update -qq
           sudo apt-get install -y ffmpeg
 
       - name: Execute Stream
         env:
-          MY_STREAM_KEY: ${{ secrets.STREAM_KEY }}
+          STREAM_KEY: ${{ secrets.STREAM_KEY }}
         run: |
-          ffmpeg -re -stream_loop -1 -i audio.m4a -loop 1 -framerate 30 -i xyz.png -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -r 30 -g 60 -c:a aac -b:a 128k -ar 44100 -shortest -f flv "rtmp://a.rtmp.youtube.com/live2/$MY_STREAM_KEY"
+          ffmpeg -re -stream_loop -1 -i "audio.m4a" -loop 1 -i "xyz.png" -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -r 30 -g 60 -c:a aac -b:a 128k -ar 44100 -shortest -f flv "rtmp://a.rtmp.youtube.com/live2/${STREAM_KEY}"
 
       - name: Trigger Next Run
         if: always()
@@ -31,3 +31,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh workflow run live.yml --repo ${{ github.repository }}
+          
