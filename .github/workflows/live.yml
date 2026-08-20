@@ -15,8 +15,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Execute Stream
+        env:
+          MY_STREAM_KEY: ${{ secrets.STREAM_KEY }}
         run: |
-          ffmpeg -re -stream_loop -1 -i audio.m4a -loop 1 -framerate 30 -i xyz.png -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -r 30 -g 60 -c:a aac -b:a 128k -ar 44100 -shortest -f flv "rtmp://a.rtmp.youtube.com/live2/YOUR_STREAM_KEY"
+          ffmpeg -re -stream_loop -1 -i audio.m4a -loop 1 -framerate 30 -i xyz.png -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -r 30 -g 60 -c:a aac -b:a 128k -ar 44100 -shortest -f flv "rtmp://a.rtmp.youtube.com/live2/$MY_STREAM_KEY"
 
       - name: Trigger Next Run
         if: always()
