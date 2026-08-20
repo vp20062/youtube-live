@@ -1,43 +1,26 @@
-name: YouTube Live
+name: 6-Hour Auto Stream Loop
 
 on:
   workflow_dispatch:
 
-jobs:
-  stream:
-    runs-on: ubuntu-latest
-    timeout-minutes: 350
+permissions:
+  actions: write
+  contents: read
 
+jobs:
+  run-stream:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg
+      - name: Execute Stream
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          timeout 350m ffmpeg -re -stream_loop -1 -i audio.m4a -loop 1 -framerate 30 -i xyz.png -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -r 30 -g 60 -c:a aac -b:a 128k -ar 44100 -shortest -f flv "rtmp://a.rtmp.youtube.com/live2/YOUR_STREAM_KEY" || true
 
-      - name: Start YouTube stream
+      - name: Trigger Next Run
+        if: always()
         env:
-          STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ffmpeg \
-            -re \
-            -stream_loop -1 \
-            -i "audio.m4a" \
-            -f lavfi \
-            -i "color=c=black:s=1280x720:r=30" \
-            -map 1:v:0 \
-            -map 0:a:0 \
-            -c:v libx264 \
-            -preset veryfast \
-            -tune stillimage \
-            -r 30 \
-            -b:v 2500k \
-            -pix_fmt yuv420p \
-            -g 60 \
-            -c:a aac \
-            -b:a 128k \
-            -ar 44100 \
-            -f flv \
-            "rtmps://a.rtmps.youtube.com/live2/$STREAM_KEY"
+          gh workflow run stream.yml --repo ${{ github.repository }}
