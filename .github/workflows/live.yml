@@ -18,42 +18,41 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Execute Stream (With Auto-Reconnect & Fail-Safe)
+      - name: Verify Files & Stream Key
         env:
           STREAM_KEY: ${{ secrets.STREAM_KEY }}
         run: |
           if [ -z "$STREAM_KEY" ]; then
-            echo "Error: STREAM_KEY is empty. Check your GitHub Secrets."
+            echo "::error::STREAM_KEY is missing from Secrets!"
             exit 1
           fi
+          if [ ! -f "xyz.png" ]; then
+            echo "::error::xyz.png file nahi mili!"
+            ls -la
+            exit 1
+          fi
+          if [ ! -f "audio.m4a" ]; then
+            echo "::error::audio.m4a file nahi mili!"
+            ls -la
+            exit 1
+          fi
+          echo "Files verified successfully."
 
-          START_TIME=$(date +%s)
-          MAX_DURATION=19800 # 5 Hours 30 Minutes
-
-          while true; do
-            CURRENT_TIME=$(date +%s)
-            ELAPSED=$((CURRENT_TIME - START_TIME))
-            REMAINING=$((MAX_DURATION - ELAPSED))
-
-            if [ $REMAINING -le 60 ]; then
-              echo "Stream target duration reached."
-              break
-            fi
-
-            echo "Starting stream. Remaining time: ${REMAINING}s"
-
-            timeout "${REMAINING}s" ffmpeg -re -loop 1 -i xyz.png -stream_loop -1 -i audio.m4a \
-              -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" \
-              -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k \
-              -pix_fmt yuv420p -r 30 -g 60 -keyint_min 60 -sc_threshold 0 \
-              -c:a aac -b:a 128k -ar 44100 \
-              -map 0:v:0 -map 1:a:0 -shortest \
-              -flvflags no_duration_filesize \
-              -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY" || true
-
-            echo "FFmpeg connection reset. Retrying in 5 seconds..."
-            sleep 5
-          done
+      - name: Execute Stream
+        env:
+          STREAM_KEY: ${{ secrets.STREAM_KEY }}
+        run: |
+          # 5 Hours 30 Minutes duration (19800 seconds)
+          ffmpeg -loglevel warning -re \
+            -stream_loop -1 -i audio.m4a \
+            -loop 1 -framerate 30 -i xyz.png \
+            -t 19800 \
+            -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
+            -c:v libx264 -preset veryfast -b:v 3000k -maxrate 3000k -bufsize 6000k \
+            -g 60 -keyint_min 60 -sc_threshold 0 \
+            -c:a aac -b:a 128k -ar 44100 \
+            -map 1:v -map 0:a \
+            -f flv -flvflags no_duration_filesize "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
 
       - name: Wait for YouTube Disconnect
         run: sleep 15
