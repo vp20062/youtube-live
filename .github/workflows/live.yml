@@ -24,7 +24,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg
 
-      - name: Execute Stream (5 Hours 11 Minutes)
+      - name: Execute Stream (5 Hours 30 Minutes)
         env:
           STREAM_KEY: ${{ secrets.STREAM_KEY }}
         run: |
@@ -33,8 +33,8 @@ jobs:
             exit 1
           fi
 
-          # timeout 21300s = 5 ghante 11 minute chalega, fir smoothly stop hoga
-          timeout 21300s ffmpeg -re -loop 1 -i xyz.png -stream_loop -1 -i audio.m4a -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -r 30 -g 60 -c:a aac -b:a 128k -ar 44100 -map 0:v:0 -map 1:a:0 -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY" || true
+          # timeout 19800s = 5 ghante 30 minute chalega, fir smoothly stop hoga
+          timeout 19800s ffmpeg -re -loop 1 -i xyz.png -stream_loop -1 -i audio.m4a -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -r 30 -g 60 -c:a aac -b:a 128k -ar 44100 -map 0:v:0 -map 1:a:0 -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY" || true
 
       - name: Wait for YouTube Disconnect
         run: sleep 15
