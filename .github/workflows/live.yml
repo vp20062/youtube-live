@@ -27,37 +27,31 @@ jobs:
             exit 1
           fi
 
-          # Stream start time record karein
           START_TIME=$(date +%s)
-          MAX_DURATION=19800 # 5 Hours 30 Minutes (in seconds)
+          MAX_DURATION=19800 # 5 Hours 30 Minutes
 
-          # Auto-restart loop agar FFmpeg network issue se crash ho
           while true; do
             CURRENT_TIME=$(date +%s)
             ELAPSED=$((CURRENT_TIME - START_TIME))
             REMAINING=$((MAX_DURATION - ELAPSED))
 
-            # Agar 5.5 hours complete ho gaye to loop exit karein
             if [ $REMAINING -le 60 ]; then
               echo "Stream target duration reached."
               break
             fi
 
-            echo "Starting/Resuming stream. Remaining time: ${REMAINING}s"
+            echo "Starting stream. Remaining time: ${REMAINING}s"
 
-            timeout "${REMAINING}s" ffmpeg -re \
-              -stream_loop -1 -i audio.m4a \
-              -loop 1 -framerate 30 -i xyz.png \
+            timeout "${REMAINING}s" ffmpeg -re -loop 1 -i xyz.png -stream_loop -1 -i audio.m4a \
               -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" \
-              -c:v libx264 -preset ultrafast -tune stillimage \
-              -b:v 2500k -maxrate 2500k -bufsize 5000k \
-              -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
-              -c:a aac -b:a 128k -ar 44100 -async 1 \
-              -map 1:v:0 -map 0:a:0 \
+              -c:v libx264 -preset ultrafast -tune stillimage -b:v 2500k -maxrate 2500k -bufsize 5000k \
+              -pix_fmt yuv420p -r 30 -g 60 -keyint_min 60 -sc_threshold 0 \
+              -c:a aac -b:a 128k -ar 44100 \
+              -map 0:v:0 -map 1:a:0 -shortest \
               -flvflags no_duration_filesize \
               -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY" || true
 
-            echo "FFmpeg exited. Re-checking duration in 5 seconds..."
+            echo "FFmpeg connection reset. Retrying in 5 seconds..."
             sleep 5
           done
 
