@@ -50,14 +50,14 @@ jobs:
         run: |
           # 5 Hours 30 Minutes duration (19800 seconds)
           ffmpeg -loglevel warning -re \
+            -loop 1 -framerate 2 -i xyz.png \
             -stream_loop -1 -i audio.m4a \
-            -loop 1 -framerate 30 -i xyz.png \
             -t 19800 \
-            -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
-            -c:v libx264 -preset veryfast -b:v 3000k -minrate 3000k -maxrate 3000k -bufsize 6000k \
+            -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
+            -c:v libx264 -preset ultrafast -tune stillimage -b:v 1500k -maxrate 1500k -bufsize 3000k \
             -r 30 -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 128k -ar 44100 \
-            -map 1:v:0 -map 0:a:0 \
+            -map 0:v:0 -map 1:a:0 \
             -f tee "[f=flv:flvflags=no_duration_filesize]rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY_1|[f=flv:flvflags=no_duration_filesize]rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY_2"
 
       - name: Wait for YouTube Disconnect
