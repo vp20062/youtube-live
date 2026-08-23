@@ -67,4 +67,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AUTO_STREAM_PAT }}
         run: |
-          gh workflow run live.yml --repo "${{ github.repository }}"
+          # Yahan apni workflow file ka exact naam dalein (jaise live.yml ya stream.yml)
+          gh workflow run "${{ github.workflow }}" --repo "${{ github.repository }}"
