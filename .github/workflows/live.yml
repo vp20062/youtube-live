@@ -24,7 +24,7 @@ jobs:
             image_file: "xyz.png"
           - name: "Channel 2"
             secret_name: "STREAM_KEY_2"
-            image_file: "channel 2.png"
+            image_file: "channel_2.png"
 
     steps:
       - name: Checkout Repository
