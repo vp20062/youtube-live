@@ -60,8 +60,8 @@ jobs:
             -map 0:v:0 -map 1:a:0 \
             -f tee "[f=flv:flvflags=no_duration_filesize]rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY_1|[f=flv:flvflags=no_duration_filesize]rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY_2"
 
-      - name: Wait for YouTube Disconnect
-        run: sleep 15
+      - name: Wait for YouTube Release
+        run: sleep 45
 
       - name: Trigger Next Run
         env:
