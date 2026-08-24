@@ -30,6 +30,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
       - name: Verify Media Files
         run: |
           if [ ! -f "${{ matrix.channel.image_file }}" ]; then
