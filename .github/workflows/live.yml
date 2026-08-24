@@ -1,4 +1,4 @@
-name: 6-Hour Auto Stream Loop (Dual Channel)
+name: 6-Hour Auto Stream Loop (Parallel Matrix)
 
 on:
   workflow_dispatch:
@@ -15,57 +15,65 @@ jobs:
   run-stream:
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        channel:
+          - name: "Channel 1"
+            secret_name: "STREAM_KEY"
+            image_file: "xyz.png"
+          - name: "Channel 2"
+            secret_name: "STREAM_KEY_2"
+            image_file: "channel 2.png"
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg
+      - name: Verify Media Files
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
-
-      - name: Verify Files & Stream Keys
-        env:
-          STREAM_KEY_1: ${{ secrets.STREAM_KEY }}
-          STREAM_KEY_2: ${{ secrets.STREAM_KEY_2 }}
-        run: |
-          if [ -z "$STREAM_KEY_1" ] || [ -z "$STREAM_KEY_2" ]; then
-            echo "::error::STREAM_KEY ya STREAM_KEY_2 Secrets me missing hai!"
-            exit 1
-          fi
-          if [ ! -f "xyz.png" ]; then
-            echo "::error::xyz.png nahi mili!"
+          if [ ! -f "${{ matrix.channel.image_file }}" ]; then
+            echo "::error::${{ matrix.channel.image_file }} file nahi mili!"
             exit 1
           fi
           if [ ! -f "audio.m4a" ]; then
-            echo "::error::audio.m4a nahi mili!"
+            echo "::error::audio.m4a file nahi mili!"
             exit 1
           fi
-          echo "All checks passed."
+          echo "Files verified for ${{ matrix.channel.name }}"
 
-      - name: Execute Stream
+      - name: Execute Stream for ${{ matrix.channel.name }}
         env:
-          STREAM_KEY_1: ${{ secrets.STREAM_KEY }}
-          STREAM_KEY_2: ${{ secrets.STREAM_KEY_2 }}
+          STREAM_KEY: ${{ secrets[matrix.channel.secret_name] }}
         run: |
+          if [ -z "$STREAM_KEY" ]; then
+            echo "::error::${{ matrix.channel.secret_name }} Secret missing hai!"
+            exit 1
+          fi
+
           # 5 Hours 30 Minutes duration (19800 seconds)
           ffmpeg -loglevel warning -re \
-            -loop 1 -framerate 2 -i xyz.png \
+            -loop 1 -framerate 2 -i "${{ matrix.channel.image_file }}" \
             -stream_loop -1 -i audio.m4a \
             -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
             -c:v libx264 -preset ultrafast -tune stillimage -b:v 1500k -maxrate 1500k -bufsize 3000k \
             -r 30 -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 128k -ar 44100 \
-            -map 0:v:0 -map 1:a:0 \
-            -f tee "[f=flv:flvflags=no_duration_filesize]rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY_1|[f=flv:flvflags=no_duration_filesize]rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY_2"
+            -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
 
-      - name: Wait for YouTube Release
-        run: sleep 45
+      - name: Wait for YouTube Connection Release
+        run: sleep 60
 
+  trigger-next-loop:
+    needs: run-stream
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
       - name: Trigger Next Run
         env:
-          GH_TOKEN: ${{ secrets.AUTO_STREAM_PAT }}
+          GH_TOKEN: ${{ secrets.AUTO_STREAM_PAT || secrets.GITHUB_TOKEN }}
         run: |
-          # Yahan apni workflow file ka exact naam dalein (jaise live.yml ya stream.yml)
-          gh workflow run "${{ github.workflow }}" --repo "${{ github.repository }}"
+          WORKFLOW_FILE=$(basename "${{ github.workflow_ref }}" | cut -d'@' -f1)
+          echo "Triggering next loop: $WORKFLOW_FILE"
+          gh workflow run "$WORKFLOW_FILE" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
