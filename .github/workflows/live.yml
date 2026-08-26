@@ -26,6 +26,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
       - name: Verify Media Files
         run: |
           if [ ! -f "${{ matrix.channel.image_file }}" ]; then
@@ -40,7 +45,6 @@ jobs:
 
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
-          # Dono secrets pass karke shell level par pick kiya jata hai
           KEY_1: ${{ secrets.STREAM_KEY }}
           KEY_2: ${{ secrets.STREAM_KEY_2 }}
           CHANNEL_ID: ${{ matrix.channel.id }}
@@ -84,7 +88,7 @@ jobs:
             exit 1
           fi
 
-          # Wait 30 seconds before triggering next run to prevent race conditions
+          # 30 seconds wait before triggering next run
           sleep 30
 
           # Trigger workflow
