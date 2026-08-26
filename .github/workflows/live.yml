@@ -72,7 +72,7 @@ jobs:
 
   trigger-next-loop:
     needs: run-stream
-    if: always()
+    if: "!cancelled()"
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Next Run
