@@ -24,12 +24,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup FFmpeg
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
-          ffmpeg -version
-
       - name: Verify Media Files
         run: |
           if [ ! -f "${{ matrix.channel.image_file }}" ]; then
@@ -46,7 +40,6 @@ jobs:
         env:
           RAW_KEY: ${{ secrets.STREAM_KEY_2 }}
         run: |
-          # Extra spaces, newline ya quotes remove karne ke liye sanitize karein
           STREAM_KEY=$(echo "$RAW_KEY" | tr -d '\r\n[:space:]"')
 
           if [ -z "$STREAM_KEY" ]; then
@@ -54,11 +47,11 @@ jobs:
             exit 1
           fi
 
-          echo "Puraane socket disconnect hone ke liye 15 second wait kar rahe hain..."
-          sleep 15
+          echo "Puraane socket disconnect hone ke liye 10 second wait kar rahe hain..."
+          sleep 10
 
           # 5 Hours 30 Minutes (19800 seconds)
-          ffmpeg -loglevel info -re \
+          ffmpeg -loglevel warning -re \
             -loop 1 -framerate 2 -i "${{ matrix.channel.image_file }}" \
             -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
             -t 19800 \
@@ -70,7 +63,7 @@ jobs:
             -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
 
       - name: Wait for YouTube Connection Release
-        run: sleep 30
+        run: sleep 20
 
   trigger-next-loop:
     needs: run-stream
@@ -86,6 +79,6 @@ jobs:
             exit 1
           fi
 
-          sleep 30
-
+          sleep 20
+          # Apni workflow file ka exact filename use karein (e.g., main.yml ya stream.yml)
           gh workflow run "${{ github.workflow }}" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
