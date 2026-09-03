@@ -44,15 +44,21 @@ jobs:
 
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
-          STREAM_KEY: ${{ secrets.STREAM_KEY_2 }}
+          RAW_KEY: ${{ secrets.STREAM_KEY_2 }}
         run: |
+          # Extra spaces, newline ya quotes remove karne ke liye sanitize karein
+          STREAM_KEY=$(echo "$RAW_KEY" | tr -d '\r\n[:space:]"')
+
           if [ -z "$STREAM_KEY" ]; then
             echo "::error::Stream key missing hai for ${{ matrix.channel.name }}!"
             exit 1
           fi
 
+          echo "Puraane socket disconnect hone ke liye 15 second wait kar rahe hain..."
+          sleep 15
+
           # 5 Hours 30 Minutes (19800 seconds)
-          ffmpeg -loglevel warning -re \
+          ffmpeg -loglevel info -re \
             -loop 1 -framerate 2 -i "${{ matrix.channel.image_file }}" \
             -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
             -t 19800 \
