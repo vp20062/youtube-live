@@ -24,6 +24,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          ffmpeg -version
+
       - name: Verify Media Files
         run: |
           if [ ! -f "${{ matrix.channel.image_file }}" ]; then
@@ -34,7 +40,7 @@ jobs:
             echo "::error::${{ matrix.channel.audio_file }} file nahi mili!"
             exit 1
           fi
-          echo "Files verified for ${{ matrix.channel.name }}"
+          echo "Files verified successfully for ${{ matrix.channel.name }}"
 
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
@@ -47,10 +53,9 @@ jobs:
             exit 1
           fi
 
-          echo "Puraane socket disconnect hone ke liye 10 second wait kar rahe hain..."
-          sleep 10
+          echo "Puraane socket disconnect hone ke liye 15 second wait kar rahe hain..."
+          sleep 15
 
-          # 5 Hours 30 Minutes (19800 seconds)
           ffmpeg -loglevel warning -re \
             -loop 1 -framerate 2 -i "${{ matrix.channel.image_file }}" \
             -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
@@ -79,6 +84,7 @@ jobs:
             exit 1
           fi
 
+          echo "Cooldown wait before triggering next workflow run..."
           sleep 20
-          # Apni workflow file ka exact filename use karein (e.g., main.yml ya stream.yml)
+
           gh workflow run "${{ github.workflow }}" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
