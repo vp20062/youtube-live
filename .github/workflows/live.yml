@@ -1,4 +1,4 @@
-name: 6-Hour Auto Stream Loop (Parallel Matrix)
+name: 6-Hour Auto Stream Loop (Single Channel Safe)
 
 on:
   workflow_dispatch:
@@ -15,10 +15,6 @@ jobs:
       fail-fast: false
       matrix:
         channel:
-          - id: "ch1"
-            name: "Channel 1"
-            image_file: "xyz.png"
-            audio_file: "audio_ch1.m4a"
           - id: "ch2"
             name: "Channel 2"
             image_file: "channel_2.png"
@@ -28,7 +24,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # FIX 1: Install & verify FFmpeg directly on the runner
       - name: Setup FFmpeg
         run: |
           sudo apt-get update -qq
@@ -49,16 +44,8 @@ jobs:
 
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
-          STREAM_KEY_CH1: ${{ secrets.STREAM_KEY }}
-          STREAM_KEY_CH2: ${{ secrets.STREAM_KEY_2 }}
-          CHANNEL_ID: ${{ matrix.channel.id }}
+          STREAM_KEY: ${{ secrets.STREAM_KEY_2 }}
         run: |
-          if [ "$CHANNEL_ID" = "ch1" ]; then
-            STREAM_KEY="$STREAM_KEY_CH1"
-          else
-            STREAM_KEY="$STREAM_KEY_CH2"
-          fi
-
           if [ -z "$STREAM_KEY" ]; then
             echo "::error::Stream key missing hai for ${{ matrix.channel.name }}!"
             exit 1
