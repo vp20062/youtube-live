@@ -18,18 +18,15 @@ jobs:
           - id: "ch1"
             name: "Channel 1"
             image_file: "xyz.png"
+            audio_file: "audio_ch1.m4a"
           - id: "ch2"
             name: "Channel 2"
             image_file: "channel_2.png"
+            audio_file: "audio_ch2.m4a"
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Setup FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
 
       - name: Verify Media Files
         run: |
@@ -37,33 +34,25 @@ jobs:
             echo "::error::${{ matrix.channel.image_file }} file nahi mili!"
             exit 1
           fi
-          if [ ! -f "audio.m4a" ]; then
-            echo "::error::audio.m4a file nahi mili!"
+          if [ ! -f "${{ matrix.channel.audio_file }}" ]; then
+            echo "::error::${{ matrix.channel.audio_file }} file nahi mili!"
             exit 1
           fi
           echo "Files verified for ${{ matrix.channel.name }}"
 
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
-          KEY_1: ${{ secrets.STREAM_KEY }}
-          KEY_2: ${{ secrets.STREAM_KEY_2 }}
-          CHANNEL_ID: ${{ matrix.channel.id }}
+          STREAM_KEY: ${{ matrix.channel.id == 'ch1' && secrets.STREAM_KEY || secrets.STREAM_KEY_2 }}
         run: |
-          if [ "$CHANNEL_ID" = "ch1" ]; then
-            STREAM_KEY="$KEY_1"
-          elif [ "$CHANNEL_ID" = "ch2" ]; then
-            STREAM_KEY="$KEY_2"
-          fi
-
           if [ -z "$STREAM_KEY" ]; then
-            echo "::error::Stream key missing hai for $CHANNEL_ID!"
+            echo "::error::Stream key missing hai for ${{ matrix.channel.name }}!"
             exit 1
           fi
 
           # 5 Hours 30 Minutes duration (19800 seconds)
           ffmpeg -loglevel warning -re \
             -loop 1 -framerate 2 -i "${{ matrix.channel.image_file }}" \
-            -stream_loop -1 -i audio.m4a \
+            -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
             -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
             -c:v libx264 -preset ultrafast -tune stillimage -b:v 1500k -maxrate 1500k -bufsize 3000k \
@@ -88,8 +77,6 @@ jobs:
             exit 1
           fi
 
-          # 30 seconds wait before triggering next run
           sleep 30
 
-          # Trigger workflow
           gh workflow run "${{ github.workflow }}" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
