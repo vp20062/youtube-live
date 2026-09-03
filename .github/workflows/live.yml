@@ -28,7 +28,6 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
-          ffmpeg -version
 
       - name: Verify Media Files
         run: |
@@ -61,10 +60,12 @@ jobs:
             -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
             -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
+            -af "aresample=async=1000" \
             -c:v libx264 -preset ultrafast -tune stillimage -b:v 1500k -maxrate 1500k -bufsize 3000k \
             -r 30 -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 128k -ar 44100 \
             -flvflags no_duration_filesize \
+            -rtmp_live live \
             -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
 
       - name: Wait for YouTube Connection Release
@@ -84,7 +85,5 @@ jobs:
             exit 1
           fi
 
-          echo "Cooldown wait before triggering next workflow run..."
           sleep 20
-
           gh workflow run "${{ github.workflow }}" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
