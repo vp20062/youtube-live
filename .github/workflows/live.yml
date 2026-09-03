@@ -55,19 +55,17 @@ jobs:
 
           echo "Starting Stream Pipeline..."
 
-          # FFmpeg command with safe audio looping and reconnection support
-          ffmpeg -loglevel error -stats -re \
+          ffmpeg -re \
             -loop 1 -framerate 2 -i "${{ matrix.channel.image_file }}" \
             -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
             -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
             -c:v libx264 -preset veryfast -tune stillimage \
             -b:v 2000k -maxrate 2000k -bufsize 4000k \
-            -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
+            -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
-            -shortest \
             -flvflags no_duration_filesize \
-            -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
+            -f flv "rtmps://a.rtmp.youtube.com/live2/$STREAM_KEY"
 
       - name: Wait for YouTube Connection Release
         run: sleep 20
