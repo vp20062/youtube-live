@@ -53,6 +53,9 @@ jobs:
             exit 1
           fi
 
+          echo "Checking Audio and Image details..."
+          ffmpeg -i "${{ matrix.channel.image_file }}" -i "${{ matrix.channel.audio_file }}" -hide_banner || true
+
           echo "Starting Stream Pipeline..."
 
           ffmpeg -re \
@@ -60,10 +63,10 @@ jobs:
             -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
             -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
-            -c:v libx264 -preset veryfast -tune stillimage -threads 2 \
-            -b:v 1500k -maxrate 1500k -bufsize 3000k \
+            -c:v libx264 -preset ultrafast -tune stillimage -threads 1 \
+            -b:v 1000k -maxrate 1000k -bufsize 2000k \
             -g 60 -keyint_min 60 -sc_threshold 0 \
-            -c:a aac -b:a 128k -ar 44100 -ac 2 \
+            -c:a aac -b:a 96k -ar 44100 -ac 2 \
             -max_muxing_queue_size 9999 \
             -flvflags no_duration_filesize+no_timestamp_drop \
             -f flv "rtmps://a.rtmp.youtube.com/live2/$STREAM_KEY"
