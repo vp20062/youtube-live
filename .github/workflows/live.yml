@@ -60,11 +60,12 @@ jobs:
             -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
             -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
-            -c:v libx264 -preset veryfast -tune stillimage \
-            -b:v 2000k -maxrate 2000k -bufsize 4000k \
+            -c:v libx264 -preset veryfast -tune stillimage -threads 2 \
+            -b:v 1500k -maxrate 1500k -bufsize 3000k \
             -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
-            -flvflags no_duration_filesize \
+            -max_muxing_queue_size 9999 \
+            -flvflags no_duration_filesize+no_timestamp_drop \
             -f flv "rtmps://a.rtmp.youtube.com/live2/$STREAM_KEY"
 
       - name: Wait for YouTube Connection Release
