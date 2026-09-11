@@ -31,8 +31,6 @@ jobs:
 
       - name: Verify Media Files
         run: |
-          echo "Checking files in current folder:"
-          ls -la
           if [ ! -f "${{ matrix.channel.image_file }}" ]; then
             echo "::error::Image file nahi mili!"
             exit 1
@@ -41,6 +39,13 @@ jobs:
             echo "::error::Audio file nahi mili!"
             exit 1
           fi
+          echo "Original files found successfully."
+
+      - name: Convert Audio to Stable MP3 Format
+        run: |
+          echo "Converting .m4a to .mp3 for stable looping..."
+          ffmpeg -i "${{ matrix.channel.audio_file }}" -vn -codec:a libmp3lame -b:a 128k stream_audio.mp3 -y
+          echo "Audio conversion completed successfully."
 
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
@@ -54,12 +59,11 @@ jobs:
             exit 1
           fi
 
-          echo "Starting Stream Pipeline..."
+          echo "Starting Stream Pipeline with MP3 Audio..."
 
-          # Yahan koi exit code chhipaya nahi gaya hai, jo bhi error hoga seedha screen par dikhega
           ffmpeg -re \
             -loop 1 -framerate 30 -i "${{ matrix.channel.image_file }}" \
-            -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
+            -stream_loop -1 -i stream_audio.mp3 \
             -map 0:v:0 -map 1:a:0 \
             -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
