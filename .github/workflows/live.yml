@@ -29,23 +29,10 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
 
-      - name: Verify Media Files
-        run: |
-          if [ ! -f "${{ matrix.channel.image_file }}" ]; then
-            echo "::error::Image file nahi mili!"
-            exit 1
-          fi
-          if [ ! -f "${{ matrix.channel.audio_file }}" ]; then
-            echo "::error::Audio file nahi mili!"
-            exit 1
-          fi
-          echo "Original files found successfully."
-
       - name: Convert Audio to Stable MP3 Format
         run: |
-          echo "Converting .m4a to .mp3 for stable looping..."
+          echo "Converting audio to MP3..."
           ffmpeg -i "${{ matrix.channel.audio_file }}" -vn -codec:a libmp3lame -b:a 128k stream_audio.mp3 -y
-          echo "Audio conversion completed successfully."
 
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
@@ -59,8 +46,10 @@ jobs:
             exit 1
           fi
 
-          echo "Starting Stream Pipeline with MP3 Audio..."
+          echo "Starting Stream Pipeline..."
 
+          # FFmpeg chalayenge aur error hone par log print karenge
+          set +e
           ffmpeg -re \
             -loop 1 -framerate 30 -i "${{ matrix.channel.image_file }}" \
             -stream_loop -1 -i stream_audio.mp3 \
@@ -73,7 +62,18 @@ jobs:
             -c:a aac -b:a 96k -ar 44100 -ac 2 \
             -max_muxing_queue_size 9999 \
             -flvflags no_duration_filesize+no_timestamp_drop \
-            -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
+            -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY" > ffmpeg_output.log 2>&1
+          
+          FFMPEG_EXIT=$?
+          set -e
+
+          if [ $FFMPEG_EXIT -ne 0 ]; then
+            echo "::error::FFmpeg crashed with exit code $FFMPEG_EXIT"
+            echo "=================== FFMPEG ERROR LOG ==================="
+            cat ffmpeg_output.log
+            echo "========================================================"
+            exit $FFMPEG_EXIT
+          fi
 
       - name: Wait for YouTube Connection Release
         run: sleep 20
