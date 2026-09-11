@@ -41,12 +41,11 @@ jobs:
           fi
           echo "Files verified successfully for ${{ matrix.channel.name }}"
 
-      - name: Prepare and Normalize Audio
+      - name: Prepare Audio Properly
         run: |
-          echo "Converting audio to a clean stream-safe format..."
-          ffmpeg -i "${{ matrix.channel.audio_file }}" -vn -acodec copy clean_audio.aac -y || \
-          ffmpeg -i "${{ matrix.channel.audio_file }}" -vn -acodec aac -b:a 128k clean_audio.aac -y
-          echo "Audio prepared successfully."
+          echo "Converting audio_ch2.m4a to a clean AAC format..."
+          ffmpeg -i "${{ matrix.channel.audio_file }}" -vn -c:a aac -b:a 128k -ar 44100 -ac 2 clean_audio.aac -y
+          echo "Audio conversion completed."
 
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
@@ -62,8 +61,7 @@ jobs:
 
           echo "Starting Stream Pipeline..."
 
-          # FFmpeg command run karenge aur error log file me save karenge
-          set +e
+          # FFmpeg command run karein aur log file banayein
           ffmpeg -re \
             -loop 1 -framerate 30 -i "${{ matrix.channel.image_file }}" \
             -stream_loop -1 -i clean_audio.aac \
@@ -76,16 +74,11 @@ jobs:
             -c:a aac -b:a 96k -ar 44100 -ac 2 \
             -max_muxing_queue_size 9999 \
             -flvflags no_duration_filesize+no_timestamp_drop \
-            -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY" > ffmpeg_log.txt 2>&1
-          
-          EXIT_CODE=$?
-          set -e
+            -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY" || FAILED=true
 
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "::error::FFmpeg failed with exit code $EXIT_CODE"
-            echo "--- FFmpeg Error Log Output ---"
-            tail -n 50 ffmpeg_log.txt
-            exit $EXIT_CODE
+          if [ "$FAILED" = "true" ]; then
+            echo "::error::FFmpeg stream failed!"
+            exit 234
           fi
 
       - name: Wait for YouTube Connection Release
