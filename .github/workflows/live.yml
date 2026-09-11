@@ -46,7 +46,7 @@ jobs:
             exit 1
           fi
 
-          echo "Starting Stream Pipeline..."
+          echo "Starting Stream Pipeline with Steady Frame Rate..."
 
           ffmpeg -re \
             -loop 1 -framerate 30 -i "${{ matrix.channel.image_file }}" \
@@ -54,6 +54,7 @@ jobs:
             -map 0:v:0 -map 1:a:0 \
             -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
+            -r 30 -fps_mode cfr \
             -c:v libx264 -preset ultrafast -tune stillimage -threads 1 \
             -b:v 1000k -maxrate 1000k -bufsize 2000k \
             -g 60 -keyint_min 60 -sc_threshold 0 \
