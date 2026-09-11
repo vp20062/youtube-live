@@ -41,6 +41,13 @@ jobs:
           fi
           echo "Files verified successfully for ${{ matrix.channel.name }}"
 
+      - name: Prepare and Normalize Audio
+        run: |
+          echo "Converting audio to a clean stream-safe format..."
+          ffmpeg -i "${{ matrix.channel.audio_file }}" -vn -acodec copy clean_audio.aac -y || \
+          ffmpeg -i "${{ matrix.channel.audio_file }}" -vn -acodec aac -b:a 128k clean_audio.aac -y
+          echo "Audio prepared successfully."
+
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
           RAW_KEY: ${{ secrets.STREAM_KEY_2 }}
@@ -53,11 +60,11 @@ jobs:
             exit 1
           fi
 
-          echo "Starting Stream Pipeline with Stable RTMP Protocol..."
+          echo "Starting Stream Pipeline with Clean Audio..."
 
           ffmpeg -re \
             -loop 1 -framerate 30 -i "${{ matrix.channel.image_file }}" \
-            -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
+            -stream_loop -1 -i clean_audio.aac \
             -map 0:v:0 -map 1:a:0 \
             -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
