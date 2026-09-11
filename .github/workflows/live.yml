@@ -29,25 +29,11 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
 
-      - name: Verify Media Files & Directory
+      - name: Check Media File Info
         run: |
-          echo "Checking files in current directory:"
-          ls -la
-          
-          if [ ! -f "${{ matrix.channel.image_file }}" ]; then
-            echo "::error::${{ matrix.channel.image_file }} file nahi mili!"
-            exit 1
-          fi
-          if [ ! -f "${{ matrix.channel.audio_file }}" ]; then
-            echo "::error::${{ matrix.channel.audio_file }} file nahi mili!"
-            exit 1
-          fi
-          echo "Files verified successfully!"
-
-      - name: Prepare Audio Properly
-        run: |
-          echo "Converting audio to clean AAC..."
-          ffmpeg -i "${{ matrix.channel.audio_file }}" -vn -c:a aac -b:a 128k -ar 44100 -ac 2 clean_audio.aac -y
+          echo "Checking Image and Audio file details..."
+          ffprobe -v error -show_entries format=duration,filename -of default=noprint_wrappers=1:nokey=1 "${{ matrix.channel.image_file }}" || echo "Image check note"
+          ffprobe -v error -show_entries format=duration,filename -of default=noprint_wrappers=1:nokey=1 "${{ matrix.channel.audio_file }}" || echo "Audio check note"
 
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
@@ -61,13 +47,12 @@ jobs:
             exit 1
           fi
 
-          echo "Starting Stream Pipeline..."
+          echo "Starting Direct Stream Pipeline..."
 
-          # Direct FFmpeg run hoga bina kisi hiding ke, taaki exact error dikhe
+          # Direct FFmpeg run without intermediate files to catch real error
           ffmpeg -re \
             -loop 1 -framerate 30 -i "${{ matrix.channel.image_file }}" \
-            -stream_loop -1 -i clean_audio.aac \
-            -map 0:v:0 -map 1:a:0 \
+            -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
             -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
             -c:v libx264 -preset ultrafast -tune stillimage -threads 1 \
