@@ -48,8 +48,6 @@ jobs:
 
           echo "Starting Stream Pipeline..."
 
-          # FFmpeg chalayenge aur error hone par log print karenge
-          set +e
           ffmpeg -re \
             -loop 1 -framerate 30 -i "${{ matrix.channel.image_file }}" \
             -stream_loop -1 -i stream_audio.mp3 \
@@ -61,19 +59,8 @@ jobs:
             -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 96k -ar 44100 -ac 2 \
             -max_muxing_queue_size 9999 \
-            -flvflags no_duration_filesize+no_timestamp_drop \
-            -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY" > ffmpeg_output.log 2>&1
-          
-          FFMPEG_EXIT=$?
-          set -e
-
-          if [ $FFMPEG_EXIT -ne 0 ]; then
-            echo "::error::FFmpeg crashed with exit code $FFMPEG_EXIT"
-            echo "=================== FFMPEG ERROR LOG ==================="
-            cat ffmpeg_output.log
-            echo "========================================================"
-            exit $FFMPEG_EXIT
-          fi
+            -flvflags no_duration_filesize \
+            -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
 
       - name: Wait for YouTube Connection Release
         run: sleep 20
