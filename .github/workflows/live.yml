@@ -56,7 +56,7 @@ jobs:
           echo "Starting Stream Pipeline..."
 
           ffmpeg -re \
-            -loop 1 -framerate 2 -i "${{ matrix.channel.image_file }}" \
+            -loop 1 -framerate 30 -i "${{ matrix.channel.image_file }}" \
             -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
             -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
