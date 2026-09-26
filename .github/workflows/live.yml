@@ -1,10 +1,7 @@
-name: 6-Hour Auto Stream Loop (Single Channel Safe)
+name: 5.5-Hour Auto Stream Loop (Single Channel)
 
 on:
   workflow_dispatch:
-  # Agar aap chahte hain ki yeh schedule ke mutabiq bhi chale, toh cron enable kar sakte hain
-  # schedule:
-  #   - cron: '0 */6 * * *'
 
 permissions:
   actions: write
@@ -13,7 +10,7 @@ permissions:
 jobs:
   run-stream:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 350
     strategy:
       fail-fast: false
       matrix:
@@ -29,45 +26,39 @@ jobs:
         with:
           lfs: true
 
-      - name: Check Audio File Details
+      - name: Check Input Files
         run: |
-          echo "Checking audio file info..."
-          ls -lh "${{ matrix.channel.audio_file }}"
-          file "${{ matrix.channel.audio_file }}"
+          echo "Checking files..."
+          ls -lh "${{ matrix.channel.image_file }}" "${{ matrix.channel.audio_file }}"
 
       - name: Install FFmpeg
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
 
-      - name: Convert Audio to Stable MP3 Format
-        run: |
-          echo "Converting audio to MP3..."
-          ffmpeg -i "${{ matrix.channel.audio_file }}" -vn -codec:a libmp3lame -b:a 128k stream_audio.mp3 -y
-
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
           RAW_KEY: ${{ secrets.STREAM_KEY_2 }}
         run: |
-          # Stream key ko sanitize karein
           STREAM_KEY=$(echo -n "$RAW_KEY" | tr -d '\r\n[:space:]"')
 
           if [ -z "$STREAM_KEY" ]; then
-            echo "::error::Stream key missing hai!"
+            echo "::error::STREAM_KEY_2 secret missing hai!"
             exit 1
           fi
 
-          echo "Starting Stream Pipeline..."
+          echo "Starting 5 Hours 30 Minutes Stream Pipeline..."
 
+          # -t 19800 = exactly 5 hours 30 minutes
           ffmpeg -re \
             -loop 1 -framerate 30 -i "${{ matrix.channel.image_file }}" \
-            -stream_loop -1 -i stream_audio.mp3 \
+            -stream_loop -1 -i "${{ matrix.channel.audio_file }}" \
             -map 0:v:0 -map 1:a:0 \
-            -t 18000 \
+            -t 19800 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
             -r 30 -fps_mode cfr \
             -c:v libx264 -preset veryfast -tune stillimage -threads 2 \
-            -b:v 1200k -maxrate 1200k -bufsize 2400k \
+            -b:v 1500k -maxrate 1500k -bufsize 3000k \
             -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 128k -ar 44100 -ac 2 \
             -max_muxing_queue_size 9999 \
@@ -87,10 +78,10 @@ jobs:
           GH_TOKEN: ${{ secrets.AUTO_STREAM_PAT }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::error::AUTO_STREAM_PAT Secret missing hai!"
+            echo "::error::AUTO_STREAM_PAT missing hai!"
             exit 1
           fi
 
-          echo "Stream finished successfully. Restarting next loop immediately..."
-          sleep 5
+          echo "5.5-hour stream finished cleanly. Dispatching next run..."
+          sleep 10
           gh workflow run "${{ github.workflow }}" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
