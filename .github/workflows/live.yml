@@ -1,4 +1,4 @@
-name: 5.5-Hour Auto Stream Loop (Single Channel)
+name: 5-Hour Auto Stream Loop (Single Channel)
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ permissions:
 jobs:
   run-stream:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 340
     strategy:
       fail-fast: false
       matrix:
@@ -31,11 +31,6 @@ jobs:
           echo "Checking files..."
           ls -lh "${{ matrix.channel.image_file }}" "${{ matrix.channel.audio_file }}"
 
-      - name: Install FFmpeg
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
-
       - name: Execute Stream for ${{ matrix.channel.name }}
         env:
           RAW_KEY: ${{ secrets.STREAM_KEY_2 }}
@@ -47,21 +42,21 @@ jobs:
             exit 1
           fi
 
-          echo "Starting 5 Hours 30 Minutes Stream Pipeline..."
+          echo "Starting 5-Hour Fixed Stream Pipeline..."
 
-          # Dono inputs par -re laga hai aur ultrafast preset se constant 1.0x speed maintain hogi
-          ffmpeg \
-            -re -loop 1 -framerate 30 -i "${{ matrix.channel.image_file }}" \
+          # -t 18000 = Exactly 5 Hours (Clock drift ke bawajood 5h 10m me cleanly exit ho jayega)
+          ffmpeg -hide_banner -loglevel warning \
+            -loop 1 -framerate 30 -i "${{ matrix.channel.image_file }}" \
             -stream_loop -1 -re -i "${{ matrix.channel.audio_file }}" \
             -map 0:v:0 -map 1:a:0 \
-            -t 19800 \
+            -t 18000 \
             -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p" \
             -r 30 -fps_mode cfr \
-            -c:v libx264 -preset ultrafast -tune stillimage \
-            -b:v 2000k -maxrate 2000k -bufsize 4000k \
+            -c:v libx264 -preset veryfast -tune stillimage \
+            -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p \
             -g 60 -keyint_min 60 -sc_threshold 0 \
-            -c:a aac -b:a 128k -ar 44100 -ac 2 \
-            -max_muxing_queue_size 1024 \
+            -c:a aac -b:a 160k -ar 44100 -ac 2 \
+            -max_muxing_queue_size 2048 \
             -flvflags no_duration_filesize \
             -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
 
@@ -82,6 +77,6 @@ jobs:
             exit 1
           fi
 
-          echo "5.5-hour stream finished cleanly. Dispatching next run..."
+          echo "Stream ended on time. Dispatching next run..."
           sleep 10
           gh workflow run "${{ github.workflow }}" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
